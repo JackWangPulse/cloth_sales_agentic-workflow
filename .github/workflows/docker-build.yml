@@ -1,0 +1,30 @@
+name: 镜像构建测试
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository(把github仓库代码放到测试的ubuntu中)
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx(准备构建环境)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image(执行打包镜像)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
