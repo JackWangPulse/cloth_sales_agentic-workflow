@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0.0
+pymysql
+python-dotenv
+pydantic-settings
+httpx
+faiss-cpu
+numpy
+langgraph>=0.2.0
+redis>=5.0.0
+cryptography>=42.0.0
+langsmith>=0.1.0
