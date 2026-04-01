@@ -31,6 +31,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # 复制应用代码
 COPY app/ /app/app/
+COPY guide_assistant_demo.html /app/guide_assistant_demo.html
 # 复制 requirements.txt（已在构建阶段使用，但保留用于调试）
 COPY requirements.txt /app/
 

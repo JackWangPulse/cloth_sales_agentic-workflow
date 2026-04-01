@@ -1,5 +1,8 @@
 """FastAPI application entry point."""
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
@@ -21,6 +24,8 @@ from app.core.logging_config import init_logging
 from app.core.middleware import TraceIdMiddleware
 from app.services.embedding_client import close_embedding_client
 from app.services.llm_client import close_llm_client
+
+DEMO_HTML_PATH = Path("/app/guide_assistant_demo.html")
 
 # Initialize logging system (must be called before creating FastAPI app)
 init_logging()
@@ -135,6 +140,18 @@ async def root() -> dict[str, str]:
         "version": settings.app_version,
         "status": "running",
     }
+
+
+@app.get("/guide_assistant_demo.html", include_in_schema=False)
+async def guide_assistant_demo() -> FileResponse:
+    """Serve the standalone guide assistant demo page."""
+    return FileResponse(DEMO_HTML_PATH)
+
+
+@app.get("/demo", include_in_schema=False)
+async def guide_assistant_demo_redirect() -> RedirectResponse:
+    """Redirect to the standalone guide assistant demo page."""
+    return RedirectResponse(url="/guide_assistant_demo.html")
 
 
 @app.on_event("shutdown")
