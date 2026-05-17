@@ -1,13 +1,28 @@
+# Web framework
 fastapi
 uvicorn[standard]
+
+# Database and settings
 sqlalchemy>=2.0.0
 pymysql
 python-dotenv
 pydantic-settings
+
+# HTTP client
 httpx
+
+# Vector search
 faiss-cpu
 numpy
+
+# Workflow / agent orchestration
 langgraph>=0.2.0
+
+# Cache
 redis>=5.0.0
+
+# Security / crypto
 cryptography>=42.0.0
+
+# Observability
 langsmith>=0.1.0
