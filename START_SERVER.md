@@ -1,83 +1,161 @@
-# 服务启动指南
+# 本地启动说明
 
-## 快速启动
+这份文档只负责本地启动说明。
 
-### 方法 1: 使用 uvicorn 命令（推荐）
+## 启动前准备
+
+### 1. Python 环境
+
+需要 Python 3.10+。
+
+创建虚拟环境：
+
+```bash
+python -m venv .venv
+```
+
+激活环境：
+
+Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+Linux / macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+安装依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 环境变量
+
+复制配置：
+
+```bash
+copy .env.example .env
+```
+
+Linux / macOS:
+
+```bash
+cp .env.example .env
+```
+
+至少保证这些配置正确：
+
+```env
+DATABASE_URL=mysql+pymysql://root:password@localhost:3306/cloth_sales?charset=utf8mb4
+REDIS_URL=redis://localhost:6379/0
+APP_NAME=Cloth Sales Service
+APP_VERSION=5.3.0
+DEBUG=false
+```
+
+如果你本地会调用大模型和向量检索，也要补齐对应的 LLM 与 Embedding 配置。
+
+### 3. 初始化数据库
+
+```bash
+mysql -u root -p < sql/schema.sql
+mysql -u root -p < sql/seed_data.sql
+```
+
+### 4. 初始化向量索引
+
+商品检索链路依赖向量索引，首次启动前建议执行：
+
+```bash
+python app/db/init_vector_store.py
+```
+
+## 启动服务
+
+### 方式 1：uvicorn
+
 ```bash
 uvicorn app.main:app --reload
 ```
 
-### 方法 2: 使用启动脚本
+### 方式 2：python -m uvicorn
+
 ```bash
-python scripts/start_server.py
+python -m uvicorn app.main:app --reload
 ```
 
-### 方法 3: 直接运行 main.py
+## 启动后检查
+
+启动成功后默认访问：
+
+- 根路径：`http://127.0.0.1:8000/`
+- 健康检查：`http://127.0.0.1:8000/health`
+- API Ping：`http://127.0.0.1:8000/api/v1/ping`
+- Swagger：`http://127.0.0.1:8000/docs`
+
+快速验证：
+
 ```bash
-python -m app.main
+curl http://127.0.0.1:8000/health
 ```
 
-## 验证服务
+PowerShell:
 
-服务启动后，访问以下端点验证：
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/health
+```
 
-1. **根端点**: http://127.0.0.1:8000/
-   - 返回应用信息
+更完整的联调检查见 [FINAL_VERIFY.md](./FINAL_VERIFY.md)。
 
-2. **健康检查**: http://127.0.0.1:8000/health
-   - 返回服务状态
+## 常用接口
 
-3. **API v1 根**: http://127.0.0.1:8000/api/v1/
-   - 返回 API 版本信息
+### 个性化推荐
 
-4. **Ping 端点**: http://127.0.0.1:8000/api/v1/ping
-   - 返回 BaseResponse 格式的响应
-
-5. **API 文档**: http://127.0.0.1:8000/docs
-   - Swagger UI 自动生成的 API 文档
-
-## 使用验证脚本
-
-运行验证脚本测试所有端点：
 ```bash
-python scripts/verify_service.py
+curl -X POST "http://127.0.0.1:8000/ai/sales/graph" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user_001",
+    "sku": "8WZ01CM1",
+    "guide_id": "guide_001"
+  }'
 ```
 
-## 项目结构
+### 商品检索
 
-```
-app/
-├── main.py              # FastAPI 应用入口
-├── core/
-│   ├── config.py       # 配置管理（Pydantic BaseSettings）
-│   └── database.py     # SQLAlchemy 2.0 数据库配置
-├── models/             # ORM 模型
-│   ├── product.py
-│   ├── guide.py
-│   ├── user_behavior_log.py
-│   └── ai_task_log.py
-├── api/
-│   └── v1/
-│       └── router.py   # API v1 路由
-└── schemas/
-    └── base_schemas.py # 基础响应模型
+```bash
+curl -X POST "http://127.0.0.1:8000/ai/vector/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "找一双棕色通勤风女鞋",
+    "top_k": 5
+  }'
 ```
 
-## 环境变量
+### 统一导购入口
 
-确保 `.env` 文件包含：
-```env
-DATABASE_URL=mysql+pymysql://root:password@localhost:3306/belle_ai?charset=utf8mb4
-APP_NAME=AI Smart Guide Service
-APP_VERSION=1.0.0
+```bash
+curl -X POST "http://127.0.0.1:8000/ai/guide/assistant" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "帮我看看这个用户现在适不适合跟进",
+    "user_id": "user_001",
+    "sku": "8WZ01CM1",
+    "guide_id": "guide_001"
+  }'
 ```
 
-## 故障排查
+## 排查顺序
 
-如果服务无法启动：
+如果本地起不来，建议按这个顺序排查：
 
-1. 检查 Python 版本（需要 3.10+）
-2. 检查依赖是否安装：`pip install -r requirements.txt`
-3. 检查数据库连接配置
-4. 查看错误日志
-
+1. 看 [requirements.txt](./requirements.txt) 依赖是否装齐
+2. 看 `.env` 是否正确
+3. 看 MySQL / Redis 是否可连
+4. 看向量索引是否已初始化
+5. 看 [LOGGING_TRACE_ID_README.md](./LOGGING_TRACE_ID_README.md) 里的日志说明
